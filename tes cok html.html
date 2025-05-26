@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Data Log Lengkap</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #f0f2f5;
+      margin: 0;
+      padding: 20px;
+    }
+
+    h2, h3 {
+      text-align: center;
+      color: #333;
+    }
+
+    .card {
+      background-color: #fff;
+      max-width: 500px;
+      margin: 0 auto 30px;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+
+    input[type="text"], input[type="email"], input[type="password"], input[type="date"] {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 15px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      box-sizing: border-box;
+    }
+
+    button {
+      background-color: #4CAF50;
+      color: white;
+      padding: 10px 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-right: 10px;
+    }
+
+    button:hover {
+      background-color: #45a049;
+    }
+
+    #filters {
+      max-width: 800px;
+      margin: 0 auto 30px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background-color: white;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+
+    th, td {
+      border: 1px solid #ddd;
+      padding: 10px;
+      text-align: left;
+    }
+
+    th {
+      background-color: #333;
+      color: white;
+    }
+
+    td {
+      background-color: #fafafa;
+    }
+
+    #edit-form {
+      max-width: 500px;
+      margin: 20px auto;
+    }
+
+    #login-error {
+      color: red;
+      margin-top: 10px;
+      text-align: center;
+    }
+
+    #loading {
+      text-align: center;
+      margin: 20px;
+      display: none;
+    }
+
+    #logout-btn {
+      background-color: #f44336;
+      margin: 0 auto 20px;
+      display: none;
+    }
+
+    @media (max-width: 600px) {
+      .card, #filters, #edit-form {
+        padding: 15px;
+      }
+
+      button {
+        width: 100%;
+        margin-bottom: 10px;
+      }
+
+      table {
+        overflow-x: auto;
+        display: block;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <h2>Logs Smart Door Lock Systems</h2>
+
+  <!-- LOGIN FORM -->
+  <div id="login-admin" class="card">
+    <h3>Login Admin</h3>
+    <label for="email">Email:</label>
+    <input type="email" id="email" placeholder="Email" />
+    <label for="password">Password:</label>
+    <input type="password" id="password" placeholder="Password" />
+    <button onclick="loginAdmin()">Login</button>
+    <div id="login-error"></div>
+  </div>
+
+  <!-- LOGOUT BUTTON -->
+  <div style="text-align:center;">
+    <button id="logout-btn" onclick="logoutAdmin()">Logout</button>
+  </div>
+
+  <!-- FILTER SECTION -->
+  <div id="filters" class="card" style="display: none;">
+    <label for="tanggal">Filter Tanggal:</label>
+    <input type="date" id="tanggal" />
+    <label for="id">Filter ID:</label>
+    <input type="text" id="id" />
+    <button onclick="fetchData()">Terapkan Filter</button>
+    <button onclick="resetFilter()">Reset</button>
+  </div>
+
+  <!-- LOADING INDICATOR -->
+  <div id="loading">
+    <p>Memuat data...</p>
+  </div>
+
+  <!-- TABEL LOG -->
+  <table id="data-table" style="display: none;">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Nama</th>
+        <th>Kelas</th>
+        <th>Jurusan</th>
+        <th>Tanggal</th>
+        <th>Waktu</th>
+        <th>Aksi</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <!-- FORM EDIT -->
+  <div id="edit-form" class="card" style="display: none;">
+    <h3>Edit Data Pengguna</h3>
+    <form id="form-edit">
+      <input type="hidden" id="edit-id" />
+      <label for="edit-nama">Nama:</label>
+      <input type="text" id="edit-nama" />
+      <label for="edit-kelas">Kelas:</label>
+      <input type="text" id="edit-kelas" />
+      <label for="edit-jurusan">Jurusan:</label>
+      <input type="text" id="edit-jurusan" />
+      <button type="button" onclick="saveEdit()">Simpan</button>
+      <button type="button" onclick="cancelEdit()">Batal</button>
+    </form>
+  </div>
+
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  <script>
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+      databaseURL: "https://YOUR_PROJECT_ID.firebaseio.com",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_PROJECT_ID.appspot.com",
+      messagingSenderId: "YOUR_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.database();
+
+    function loginAdmin() {
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
+
+      auth.signInWithEmailAndPassword(email, password)
+        .then((userCredential) => {
+          const uid = userCredential.user.uid;
+          return db.ref(`users/${uid}`).once("value");
+        })
+        .then((snapshot) => {
+          const userData = snapshot.val();
+          if (userData?.role === "admin") {
+            document.getElementById("login-error").innerHTML = "";
+            document.getElementById("data-table").style.display = "table";
+            document.getElementById("filters").style.display = "block";
+            document.getElementById("login-admin").style.display = "none";
+            document.getElementById("logout-btn").style.display = "inline-block";
+            fetchData();
+          } else {
+            auth.signOut();
+            document.getElementById("login-error").innerText = "Akses ditolak: bukan admin.";
+          }
+        })
+        .catch((error) => {
+          document.getElementById("login-error").innerText = error.message;
+        });
+    }
+
+    function logoutAdmin() {
+      auth.signOut().then(() => {
+        location.reload();
+      });
+    }
+
+    function ubahFormatTanggal(input) {
+      if (!input) return "";
+      const [year, month, day] = input.split("-");
+      return `${day.padStart(2, '0')}-${month.padStart(2, '0')}-${year}`;
+    }
+
+    async function fetchData() {
+      const tableBody = document.querySelector("#data-table tbody");
+      tableBody.innerHTML = "";
+
+      const selectedDate = ubahFormatTanggal(document.getElementById("tanggal").value);
+      const selectedID = document.getElementById("id").value;
+
+      if (!selectedID && !selectedDate) {
+        const konfirmasi = confirm("Tidak ada filter diterapkan. Apakah Anda yakin ingin memuat semua data?");
+        if (!konfirmasi) return;
+      }
+
+      document.getElementById("loading").style.display = "block";
+
+      try {
+        const [logSnapshot, userSnapshot] = await Promise.all([
+          db.ref("logs").once("value"),
+          db.ref("users").once("value")
+        ]);
+
+        const logs = logSnapshot.val();
+        const users = userSnapshot.val();
+
+        if (!logs) return;
+
+        Object.keys(logs).forEach((id) => {
+          if (selectedID && selectedID !== id) return;
+
+          const userData = users?.[id] || { nama: "-", kelas: "-", jurusan: "-" };
+          const userLogs = logs[id];
+
+          Object.keys(userLogs).forEach((logKey) => {
+            const log = userLogs[logKey];
+            // Add your logic to display logs in the table
+            const row = tableBody.insertRow();
+            row.insertCell(0).innerText = id;
+            row.insertCell(1).innerText = userData.nama;
+            row.insertCell(2).innerText = userData.kelas;
+            row.insertCell(3).innerText = userData.jurusan;
+            row.insertCell(4).innerText = log.tanggal;
+            row.insertCell(5).innerText = log.waktu;
+            row.insertCell(6).innerHTML = `<button onclick="editLog('${id}')">Edit</button>`;
+          });
+        });
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      } finally {
+        document.getElementById("loading").style.display = "none";
+      }
+    }
+
+    function resetFilter() {
+      document.getElementById("tanggal").value = "";
+      document.getElementById("id").value = "";
+      fetchData();
+    }
+
+    function saveEdit() {
+      // Implement save edit logic
+    }
+
+    function cancelEdit() {
+      // Implement cancel edit logic
+    }
+  </script>
+</body>
+</html>
